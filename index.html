@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>行测刷题 · AI错题解析</title>
+<style>
+:root{--bg:#f5f5f7;--card:#fff;--text:#1d1d1f;--sub:#86868b;--accent:#5865f2;--accent2:#8b5cf6;--border:rgba(0,0,0,.06);--shadow-sm:0 1px 3px rgba(0,0,0,.04);--radius:16px;--green:#16a34a;--red:#dc2626}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif;background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased;line-height:1.5}
+.nav{position:sticky;top:0;z-index:100;background:rgba(245,245,247,.8);backdrop-filter:saturate(180%)blur(20px);border-bottom:1px solid var(--border);padding:0 24px}
+.nav-inner{max-width:1300px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;height:52px}
+.nav-logo{display:flex;align-items:center;gap:8px;font-size:.9em;font-weight:700}
+.nav-logo .icon{width:28px;height:28px;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:7px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:.85em}
+.nav-badge{font-size:.65em;padding:4px 12px;border-radius:20px;background:#fff;border:1px solid var(--border);color:var(--sub);display:flex;align-items:center;gap:5px}
+.main{max-width:1300px;margin:0 auto;padding:20px 24px 40px;display:grid;grid-template-columns:300px 1fr;gap:20px;align-items:start}
+
+/* Left panel */
+.sidebar{display:flex;flex-direction:column;gap:12px}
+.side-card{background:var(--card);border-radius:var(--radius);border:1px solid var(--border);box-shadow:var(--shadow-sm);padding:16px}
+.side-card h3{font-size:.75em;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--sub);margin-bottom:10px}
+.cat-item{padding:8px 12px;border-radius:10px;font-size:.8em;font-weight:600;cursor:pointer;transition:.2s;display:flex;justify-content:space-between;align-items:center;border:1px solid transparent}
+.cat-item:hover{background:#f0f4ff;color:var(--accent)}
+.cat-item.active{background:#f0f4ff;color:var(--accent);border-color:var(--accent)}
+.cat-item .count{font-size:.7em;color:var(--sub)}
+.wrong-list{max-height:300px;overflow-y:auto}
+.wrong-item{padding:8px 10px;border-radius:8px;font-size:.72em;margin-bottom:4px;background:#fef2f2;cursor:pointer;border-left:3px solid var(--red);transition:.2s}
+.wrong-item:hover{background:#fee2e2}
+.wrong-item .q{font-weight:600;margin-bottom:2px}
+.wrong-item .meta{font-size:.85em;color:var(--sub)}
+
+/* Right panel */
+.main-card{background:var(--card);border-radius:var(--radius);border:1px solid var(--border);box-shadow:var(--shadow-sm);padding:28px;min-height:500px}
+.q-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
+.q-meta{font-size:.7em;color:var(--sub)}
+.q-type-badge{padding:3px 10px;border-radius:8px;font-size:.65em;font-weight:600;background:#f0f4ff;color:var(--accent)}
+.q-text{font-size:1em;line-height:1.8;margin-bottom:20px;font-weight:500}
+.options{display:flex;flex-direction:column;gap:10px;margin-bottom:20px}
+.opt{padding:14px 18px;border:2px solid var(--border);border-radius:12px;font-size:.9em;cursor:pointer;transition:.2s;display:flex;align-items:center;gap:10px}
+.opt:hover{border-color:var(--accent)}
+.opt.selected{border-color:var(--accent);background:#f0f4ff}
+.opt.correct{border-color:var(--green);background:#f0fdf4}
+.opt.wrong{border-color:var(--red);background:#fef2f2}
+.opt.disabled{pointer-events:none;opacity:.7}
+.opt .letter{width:28px;height:28px;border-radius:50%;background:var(--bg);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.85em;flex-shrink:0}
+.opt.selected .letter{background:var(--accent);color:#fff}
+.opt.correct .letter{background:var(--green);color:#fff}
+.opt.wrong .letter{background:var(--red);color:#fff}
+
+.btn-row{display:flex;gap:10px;flex-wrap:wrap}
+.btn{padding:10px 22px;border-radius:22px;font-size:.84em;font-weight:700;cursor:pointer;border:0;transition:.25s;display:inline-flex;align-items:center;gap:6px}
+.btn-primary{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;box-shadow:0 4px 14px rgba(88,101,242,.25)}
+.btn-primary:hover{transform:translateY(-1px)}
+.btn-primary:disabled{opacity:.4;transform:none}
+.btn-ghost{background:#fff;border:1px solid var(--border);color:var(--sub)}
+.btn-ghost:hover{border-color:var(--accent);color:var(--text)}
+
+.explain-box{margin-top:20px;padding:20px;background:#fafafa;border-radius:12px;border:1px solid var(--border);display:none;font-size:.82em;line-height:1.8}
+.explain-box.show{display:block;animation:fadeUp .3s ease}
+.explain-box h4{font-size:.9em;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.explain-box .ai-label{font-size:.65em;color:var(--sub)}
+.explain-box .xhs-style{color:#444}
+.xhs-style strong{color:var(--accent);font-size:1.05em}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+.score-row{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:8px}
+.score-item{font-size:.75em;color:var(--sub);background:#f9f9fb;padding:4px 12px;border-radius:8px}
+
+.empty{padding:60px 20px;text-align:center;color:var(--sub);font-size:.85em}
+.footer{text-align:center;padding:30px;color:#b0b0b8;font-size:.65em;border-top:1px solid var(--border)}
+
+@media(max-width:900px){.main{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <div class="nav-logo"><div class="icon">📝</div>行测刷题 · AI错题解析</div>
+    <div class="nav-badge">花生十三风格 · DeepSeek驱动</div>
+  </div>
+</nav>
+
+<div class="main">
+  <!-- Left -->
+  <div class="sidebar">
+    <div class="side-card">
+      <h3>五大模块</h3>
+      <div class="cat-item active" data-cat="判断推理" onclick="switchCat('判断推理',this)">判断推理 <span class="count" id="cnt1">0</span></div>
+      <div class="cat-item" data-cat="言语理解" onclick="switchCat('言语理解',this)">言语理解 <span class="count" id="cnt2">0</span></div>
+      <div class="cat-item" data-cat="数量关系" onclick="switchCat('数量关系',this)">数量关系 <span class="count" id="cnt3">0</span></div>
+      <div class="cat-item" data-cat="资料分析" onclick="switchCat('资料分析',this)">资料分析 <span class="count" id="cnt4">0</span></div>
+      <div class="cat-item" data-cat="常识判断" onclick="switchCat('常识判断',this)">常识判断 <span class="count" id="cnt5">0</span></div>
+    </div>
+    <div class="side-card">
+      <h3>📊 统计</h3>
+      <div class="score-row">
+        <div class="score-item">正确：<strong id="correctCount">0</strong></div>
+        <div class="score-item">错误：<strong id="wrongCount">0</strong></div>
+        <div class="score-item">正确率：<strong id="rate">-</strong></div>
+      </div>
+    </div>
+    <div class="side-card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <h3 style="margin-bottom:0">错题本</h3>
+        <button class="btn btn-ghost" style="font-size:.65em;padding:4px 10px" onclick="exportWrong()">📥 导出Word</button>
+      </div>
+      <div class="wrong-list" id="wrongList"><div class="empty" style="font-size:.7em;padding:20px">暂无错题</div></div>
+    </div>
+  </div>
+
+  <!-- Right -->
+  <div>
+    <div class="main-card" id="questionArea">
+      <div class="q-header">
+        <div class="q-meta"><span class="q-type-badge" id="qType">判断推理</span> &nbsp; 第 <span id="qNum">1</span> 题</div>
+        <button class="btn btn-ghost" style="font-size:.7em;padding:4px 12px" onclick="nextQuestion()">下一题 →</button>
+      </div>
+      <div class="q-text" id="qText">点击左侧模块开始刷题</div>
+      <div class="options" id="options"></div>
+      <div class="btn-row">
+        <button class="btn btn-primary" id="btnSubmit" onclick="submitAnswer()" disabled>提交答案</button>
+        <button class="btn btn-ghost" onclick="nextQuestion()">换一题</button>
+      </div>
+      <div class="explain-box" id="explainBox">
+        <h4>🤖 AI 解析 <span class="ai-label">花生十三风格</span></h4>
+        <div class="xhs-style" id="explainContent"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<footer class="footer">AI解析由DeepSeek驱动 · 花生十三解题方法论 · 仅供练习参考</footer>
+
+<script>
+// ============ 题库 ============
+var BANK = {
+  '判断推理': [
+    {q:'从所给的四个选项中，选择最合适的一个填入问号处，使之呈现一定的规律性：2, 4, 8, 16, 32, ?',o:['48','56','64','72'],a:2},
+    {q:'所有的鸟都会飞。企鹅是鸟。所以企鹅会飞。以下哪项与上述推理的错误相同？',o:['所有鱼都生活在水里。鲸鱼是鱼。所以鲸鱼生活在水里','所有学生都要考试。小明不是学生。所以小明不用考试','所有花都需要阳光。向日葵是花。所以向日葵需要阳光','所有动物都需要氧气。猫是动物。所以猫需要氧气'],a:0},
+    {q:'甲、乙、丙三人中只有一人会游泳。甲说：我会。乙说：我不会。丙说：甲不会。如果三人中只有一人说了真话，那么会游泳的是？',o:['甲','乙','丙','无法确定'],a:1},
+    {q:'所有A都是B，有些C不是B。由此可以推出？',o:['有些C不是A','所有A都是C','有些C是A','无法确定'],a:3},
+  ],
+  '言语理解': [
+    {q:'填入划横线部分最恰当的一项是：中国传统文化中的"和而不同"思想，___了中华文明海纳百川的博大胸怀。',o:['体现','表现','展现','显示'],a:0},
+    {q:'下列句子中，没有语病的一项是：',o:['通过这次学习，使我提高了认识','他的写作水平有了明显的提高','我们认真研究听取了大家的意见','能否刻苦钻研是取得好成绩的关键'],a:1},
+    {q:'这段文字的主要观点是：随着互联网技术的发展，人们获取信息的方式发生了根本性的变化，但这种变化也带来了信息过载和注意力碎片化的问题。',o:['互联网技术利大于弊','信息获取方式发生了根本变化且存在问题','人们应该减少使用互联网','注意力碎片化是最严重的问题'],a:1},
+  ],
+  '数量关系': [
+    {q:'一项工程，甲单独做需要10天，乙单独做需要15天。两人合作需要多少天？',o:['5天','6天','7天','8天'],a:1},
+    {q:'某商品原价200元，先涨价20%，再打八折。最终价格是多少？',o:['160元','176元','192元','200元'],a:2},
+    {q:'一个长方形水池，长宽比为3:2，面积为54平方米。周长是多少米？',o:['24','30','36','42'],a:1},
+  ],
+  '资料分析': [
+    {q:'2019年某省GDP为4.8万亿元，2020年增长7.5%，2021年增长6.8%。2021年该省GDP约为多少万亿元？',o:['5.2','5.5','5.8','6.1'],a:1},
+    {q:'某市2020年常住人口为820万人，城镇化率为65%。该市城镇人口约为多少万人？',o:['490','510','533','548'],a:2},
+  ],
+  '常识判断': [
+    {q:'下列不属于我国宪法规定的公民基本权利的是？',o:['平等权','选举权和被选举权','罢工权','受教育权'],a:2},
+    {q:'2023年8月，我国在哪个卫星发射中心用长征四号丙运载火箭成功发射了高分十二号04星？',o:['西昌','酒泉','太原','文昌'],a:1},
+    {q:'下列哪项属于行政处罚？',o:['记过','罚款','降级','撤职'],a:1},
+    {q:'战国时期"百家争鸣"中，主张"兼爱""非攻"的思想家是？',o:['孔子','孟子','墨子','荀子'],a:2},
+  ]
+};
+
+// Make sure each question has correct answer index
+for (var k in BANK) {
+  BANK[k].forEach(function(q, i) {
+    if (typeof q.a !== 'number' || q.a < 0 || q.a >= q.o.length) {
+      console.error('Invalid answer for ' + k + ' Q' + (i+1));
+    }
+  });
+}
+
+// Update counts
+for (var i = 1; i <= 5; i++) {
+  var cats = ['判断推理','言语理解','数量关系','资料分析','常识判断'];
+  var el = document.getElementById('cnt' + i);
+  if (el) el.textContent = BANK[cats[i-1]].length + '题';
+}
+
+var currentCat = '判断推理';
+var currentQ = null;
+var selectedOpt = -1;
+var answered = false;
+var correctTotal = parseInt(localStorage.getItem('xc_correct') || '0');
+var wrongTotal = parseInt(localStorage.getItem('xc_wrong') || '0');
+var wrongList = JSON.parse(localStorage.getItem('xc_wrongList') || '[]');
+updateStats();
+renderWrongList();
+
+function switchCat(cat, el) {
+  currentCat = cat;
+  document.querySelectorAll('.cat-item').forEach(function(b) { b.classList.remove('active'); });
+  el.classList.add('active');
+  nextQuestion();
+}
+
+function nextQuestion() {
+  var pool = BANK[currentCat];
+  if (!pool || !pool.length) return;
+  currentQ = pool[Math.floor(Math.random() * pool.length)];
+  selectedOpt = -1;
+  answered = false;
+
+  document.getElementById('qType').textContent = currentCat;
+  document.getElementById('qNum').textContent = pool.indexOf(currentQ) + 1;
+  document.getElementById('qText').textContent = currentQ.q;
+  document.getElementById('btnSubmit').disabled = false;
+  document.getElementById('btnSubmit').textContent = '提交答案';
+  document.getElementById('explainBox').classList.remove('show');
+
+  var optsHtml = '';
+  var letters = ['A','B','C','D'];
+  currentQ.o.forEach(function(o, i) {
+    optsHtml += '<div class="opt" onclick="selectOpt(' + i + ',this)"><span class="letter">' + letters[i] + '</span>' + o + '</div>';
+  });
+  document.getElementById('options').innerHTML = optsHtml;
+}
+
+function selectOpt(i, el) {
+  if (answered) return;
+  selectedOpt = i;
+  document.querySelectorAll('.opt').forEach(function(o) { o.classList.remove('selected'); });
+  el.classList.add('selected');
+}
+
+function submitAnswer() {
+  if (selectedOpt === -1) { alert('请先选择一个选项'); return; }
+  if (answered) return;
+  answered = true;
+  document.getElementById('btnSubmit').disabled = true;
+
+  var isCorrect = selectedOpt === currentQ.a;
+  var letters = ['A','B','C','D'];
+
+  // Highlight correct/wrong
+  document.querySelectorAll('.opt').forEach(function(o, i) {
+    o.classList.add('disabled');
+    if (i === currentQ.a) o.classList.add('correct');
+    if (i === selectedOpt && !isCorrect) o.classList.add('wrong');
+  });
+
+  if (isCorrect) {
+    correctTotal++;
+    document.getElementById('btnSubmit').textContent = '✅ 回答正确';
+    document.getElementById('btnSubmit').style.background = '#16a34a';
+    setTimeout(function() { document.getElementById('btnSubmit').style.background = ''; }, 2000);
+  } else {
+    wrongTotal++;
+    document.getElementById('btnSubmit').textContent = '❌ 回答错误';
+    document.getElementById('btnSubmit').style.background = '#dc2626';
+    setTimeout(function() { document.getElementById('btnSubmit').style.background = ''; }, 2000);
+
+    // Save to wrong list
+    wrongList.unshift({cat: currentCat, q: currentQ.q, o: currentQ.o, a: currentQ.a, my: selectedOpt, time: new Date().toISOString()});
+    if (wrongList.length > 50) wrongList = wrongList.slice(0, 50);
+    localStorage.setItem('xc_wrongList', JSON.stringify(wrongList));
+    renderWrongList();
+
+    // Get AI explanation
+    getExplanation();
+  }
+
+  localStorage.setItem('xc_correct', correctTotal);
+  localStorage.setItem('xc_wrong', wrongTotal);
+  updateStats();
+}
+
+function updateStats() {
+  document.getElementById('correctCount').textContent = correctTotal;
+  document.getElementById('wrongCount').textContent = wrongTotal;
+  var total = correctTotal + wrongTotal;
+  document.getElementById('rate').textContent = total > 0 ? (correctTotal / total * 100).toFixed(0) + '%' : '-';
+}
+
+function renderWrongList() {
+  var el = document.getElementById('wrongList');
+  if (!wrongList.length) { el.innerHTML = '<div class="empty" style="font-size:.7em;padding:20px">暂无错题</div>'; return; }
+  el.innerHTML = wrongList.map(function(w, i) {
+    return '<div class="wrong-item" onclick="reviewWrong(' + i + ')"><div class="q">' + w.q.substring(0, 30) + '...</div><div class="meta">' + w.cat + ' · 你的答案：' + ['A','B','C','D'][w.my] + ' → 正确：' + ['A','B','C','D'][w.a] + '</div></div>';
+  }).join('');
+}
+
+function reviewWrong(i) {
+  var w = wrongList[i];
+  currentQ = { q: w.q, o: w.o, a: w.a };
+  selectedOpt = w.my;
+  answered = true;
+  currentCat = w.cat;
+
+  document.getElementById('qType').textContent = w.cat + ' (错题回顾)';
+  document.getElementById('qText').textContent = w.q;
+  document.getElementById('btnSubmit').disabled = true;
+  document.getElementById('btnSubmit').textContent = ['A','B','C','D'][w.my] + ' → ' + ['A','B','C','D'][w.a];
+  document.getElementById('explainBox').classList.remove('show');
+
+  var letters = ['A','B','C','D'];
+  document.getElementById('options').innerHTML = w.o.map(function(o, j) {
+    var cls = j === w.a ? 'correct' : (j === w.my ? 'wrong' : '');
+    return '<div class="opt disabled ' + cls + '"><span class="letter">' + letters[j] + '</span>' + o + '</div>';
+  }).join('');
+}
+
+async function getExplanation() {
+  var box = document.getElementById('explainBox');
+  var content = document.getElementById('explainContent');
+  box.classList.add('show');
+  content.innerHTML = '⏳ AI正在生成花生十三风格解析...';
+
+  var prompt = '你是有10年行测教学经验的老师，风格模仿公考名师花生十三——用最精炼的口诀式语言讲题，一针见血，不啰嗦。\n【题型】' + currentCat + '\n【题目】' + currentQ.q + '\n【选项】' + currentQ.o.map(function(o,i){return ['A','B','C','D'][i]+'. '+o}).join(' | ') + '\n【正确答案】' + ['A','B','C','D'][currentQ.a] + '\n【我的答案】' + ['A','B','C','D'][selectedOpt] + '\n请用花生十三的风格简短分析：1.关键词/突破口在哪 2.为什么选正确答案 3.我错在哪（如果对了就说解题思路）4.一句话口诀总结。控制在150字以内。';
+
+  try {
+    var res = await fetch('https://api.deepseek.com/chat/completions', {
+      method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer sk-0541b3112cd44ec18041c235d380affc'},
+      body:JSON.stringify({model:'deepseek-chat',messages:[{role:'user',content:prompt}],max_tokens:500,temperature:.7})
+    });
+    var data = await res.json();
+    content.innerHTML = (data.choices[0].message.content || '').replace(/\n/g,'<br>').replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>');
+  } catch(e) { content.innerHTML = '解析生成失败，请重试'; }
+}
+
+function exportWrong() {
+  if (!wrongList.length) { alert('暂无错题可导出'); return; }
+  var html = '<html><head><meta charset="UTF-8"><style>body{font-family:SimSun;font-size:14px;line-height:1.8;padding:20px}h2{text-align:center}li{padding:8px 0;border-bottom:1px solid #eee}</style></head><body><h2>行测错题本</h2><ol>';
+  wrongList.forEach(function(w, i) {
+    html += '<li><strong>[' + w.cat + ']</strong> ' + w.q + '<br>你的答案：<b style="color:red">' + ['A','B','C','D'][w.my] + '</b> &nbsp; 正确答案：<b style="color:green">' + ['A','B','C','D'][w.a] + '</b><br>选项：' + w.o.map(function(o,j){return ['A','B','C','D'][j]+'.'+o}).join('；') + '</li>';
+  });
+  html += '</ol><p style="text-align:center;color:#999;margin-top:30px">导出时间：' + new Date().toLocaleString() + '</p></body></html>';
+  var blob = new Blob([html], {type:'application/msword'});
+  var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = '行测错题本.doc'; a.click();
+}
+
+// Init
+nextQuestion();
+</script>
+
+</body>
+</html>
